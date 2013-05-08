@@ -1,0 +1,308 @@
+Long Entry Strategy:
+
+Get in when MACDHistogram(24, 52, 18, EMA) > 0 and MACDHistogram(24, 52, 18, EMA)[2] < 0 and time is within 2:00am and 16:00pm
+Get out when HullMovingAvg(20) < HullMovingAverage(60)
+
+Short Entry Strategy:
+
+Get in when MACDHistogram(24, 52, 18, EMA) < 0 and MACDHistogram(24, 52, 18, EMA)[2] > 0 and time is within 2:00am and 16:00pm
+Get out when HullMovingAvg(20) > HullMovingAverage(60)
+
+==============
+Example 1:
+
+#
+# thinkorswim, inc. (c) 2007
+#
+
+declare LONG_ENTRY;
+
+input length = 20;
+
+input num_devs_dn = 2;
+
+input bollinger_price = close;
+
+input lower_band_price = close;
+
+setColor(GetColor(0));
+
+def value = Average(bollinger_price, length) - num_devs_dn * stdev(bollinger_price, length);
+
+def crosses_over = lower_band_price > value and lower_band_price[1] <= value[1];
+
+def condition = crosses_over and high[-1] >= value;
+
+addOrder(condition, Max(open[-1], value));
+
+==============
+
+#
+# thinkorswim, inc. (c) 2007
+#
+
+declare SHORT_ENTRY;
+
+input length = 20;
+input num_devs_up = 2;
+input bollinger_price = close;
+input upper_band_price = close;
+
+def value = Average(bollinger_price, length) + num_devs_up * stdev(bollinger_price, length);
+def crosses_under = upper_band_price < value && upper_band_price[1] >= value[1];
+def condition = crosses_under && low[-1] <= value;
+addOrder(condition, Min(open[-1], value));
+
+SetColor(GetColor(9));
+
+===========
+ATRTrailingStopLE
+# @new
+#
+# thinkorswim, inc. (c) 2009
+#
+
+declare LONG_ENTRY;
+
+input trailType = {default modified, unmodified};
+input ATRPeriod = 5;
+input ATRFactor = 3.5;
+input firstTrade = {default long, short};
+
+def condition = ATRTrailingStop(trailType, ATRPeriod, ATRFactor, firstTrade).buySignal;
+
+SetColor(GetColor(0));
+
+addOrder(condition);
+
+============
+ATRTrailingStopSE
+# @new
+#
+# thinkorswim, inc. (c) 2009
+#
+
+declare SHORT_ENTRY;
+
+input trailType = {default modified, unmodified};
+input ATRPeriod = 5;
+input ATRFactor = 3.5;
+input firstTrade = {default long, short};
+
+def condition = ATRTrailingStop(trailType, ATRPeriod, ATRFactor, firstTrade).sellSignal;
+
+SetColor(GetColor(1));
+
+addOrder(condition);
+
+=============
+ConsBarsDownSE
+
+#
+# thinkorswim, inc. (c) 2007
+#
+
+declare SHORT_ENTRY;
+
+input ConsecutiveBarsDown = 3;
+input price = close;
+
+rec bars_down = if price < price[1] then bars_down[1] + 1 else 0;
+addOrder(bars_down >= ConsecutiveBarsDown);
+
+SetColor(GetColor(1));
+===============
+ConsBarsUpLE
+
+
+declare LONG_ENTRY;
+
+input ConsecutiveBarsUp = 3;
+input price = close;
+
+rec bars_up = if price > price[1] then bars_up[1] + 1 else 0;
+addOrder(bars_up >= ConsecutiveBarsUp);
+
+SetColor(GetColor(2));
+================
+
+MomentumLE
+
+
+declare LONG_ENTRY;
+
+setColor(GetColor(3));
+
+input length = 12;
+input price_scale = 100;
+
+input price = close;
+
+def delta = price - price[length];
+def acceleration = delta - delta[1];
+
+def point = 1 / price_scale;
+
+def condition = delta > 0 and acceleration > 0 and high[-1] >= high + point;
+
+addOrder(condition, Max(open[-1], high + point));
+=================
+
+VoltyExpansionCloseLX
+
+declare LONG_EXIT;
+
+input numATRs = 1.5;
+
+input length = 5;
+
+
+
+setColor(GetColor(4));
+
+def val = AvgTrueRange(high, close, low, length);
+
+
+def condition = low[-1] <= close - val * numATRs;
+
+addOrder(condition, Min(open[-1], close - val * numATRs));
+
+=================
+
+MACDHistogramLE
+
+declare LONG_ENTRY;
+
+setColor(GetColor(3));
+
+input length = 12;
+input price_scale = 100;
+
+input price = close;
+
+def delta = price - price[length];
+def acceleration = delta - delta[1];
+
+def point = 1 / price_scale;
+
+def condition = delta > 0 and acceleration > 0 and high[-1] >= high + point;
+
+addOrder(condition, Max(open[-1], high + point));
+
+==============================
+
+
+# @new
+#
+# thinkorswim, inc. (c) 2009
+#
+
+#hint: <b>RSIWilder Crossover</b>\nIdentifies when an instrument may be overbought or oversold by finding when the Relative Strength Index has crossed over or under a specified value.\n Crossover to values above 30 indicates an oversold position; crossover to values below 70 indicates an overbought position.
+#hint length: The number of bars used to calculate the Relative Strength Index <b>(Default is 14)</b>
+#hint crossingType: Defines whether to apply the study when the RSI goes above or below the specified threshold <b>(Default is above)</b>
+#hint threshold: Index value to be crossed <b>(Default is 30)</b>
+
+#wizard text: RSI crosses
+#wizard input: crossingType
+#wizard input: threshold
+#wizard text: Inputs: length:
+#wizard input: length
+
+input length = 14;
+input crossingType = {default above, below};
+input threshold = 30;
+
+plot signal = crossover(crossingType == CrossingType.above, RSIWilder(length=length).RSI > threshold);
+
+signal.DefineColor("Above", GetColor(7));
+signal.DefineColor("Below", GetColor(8));
+signal.AssignValueColor(if crossingType == CrossingType.above then signal.color("Above") else signal.color("Below"));
+
+signal.SetPaintingStrategy(if crossingType == CrossingType.above
+    then PaintingStrategy.BOOLEAN_ARROW_UP
+    else PaintingStrategy.BOOLEAN_ARROW_DOWN, yes);
+    
+=======================
+
+RSI_EMA
+
+declare lower;
+
+input length = 14;
+input over_bought = 70;
+input over_sold = 30;
+input price = close;
+
+def NetChgAvg = ExpAverage(price - price[1], length);
+def TotChgAvg = ExpAverage(AbsValue(price - price[1]), length);
+def ChgRatio = if TotChgAvg != 0 then NetChgAvg / TotChgAvg else 0;
+
+plot RSI_EMA = 50 * (ChgRatio + 1);
+plot OverSold = over_sold;
+plot OverBought = over_bought;
+
+RSI_EMA.SetDefaultColor(GetColor(8));
+OverBought.SetDefaultColor(GetColor(5));
+OverSold.SetDefaultColor(GetColor(5));
+================
+
+RSIWilder
+
+
+declare lower;
+
+input length = 14;
+input over_Bought = 70;
+input over_Sold = 30;
+input price = close;
+
+def NetChgAvg = WildersAverage(price - price[1], length);
+def TotChgAvg = WildersAverage(AbsValue(price - price[1]), length);
+def ChgRatio = if TotChgAvg != 0 then NetChgAvg / TotChgAvg else 0;
+
+plot RSI = 50 * (ChgRatio + 1);
+plot OverSold = over_Sold;
+plot OverBought = over_Bought;
+
+RSI.DefineColor("OverBought", GetColor(5));
+RSI.DefineColor("Normal", GetColor(7));
+RSI.DefineColor("OverSold", GetColor(1));
+RSI.AssignValueColor(if RSI > over_Bought then RSI.color("OverBought") else if RSI < over_Sold then RSI.color("OverSold") else RSI.color("Normal"));
+OverSold.SetDefaultColor(GetColor(8));
+OverBought.SetDefaultColor(GetColor(8));
+
+====================
+
+RSIWilderCumulative
+
+
+declare lower;
+
+input length = 2;
+input over_Bought = 70;
+input over_Sold = 30;
+input price = close;
+
+def NetChgAvg = WildersAverage(price - price[1], length);
+def TotChgAvg = WildersAverage(AbsValue(price - price[1]), length);
+def ChgRatio = if TotChgAvg != 0 then NetChgAvg / TotChgAvg else 0;
+
+plot RSI = 50 * (ChgRatio + 1);
+plot OverSold = over_Sold;
+plot OverBought = over_Bought;
+plot RSICumulative = RSI + RSI[1] + RSI[2]
+
+RSI.DefineColor("OverBought", GetColor(5));
+RSI.DefineColor("Normal", GetColor(7));
+RSI.DefineColor("OverSold", GetColor(1));
+RSI.AssignValueColor(if RSI > over_Bought then RSI.color("OverBought") else if RSI < over_Sold then RSI.color("OverSold") else RSI.color("Normal"));
+
+RSICumulative.DefineColor("UP", GetColor(5));
+RSICumulative.DefineColor("Down", GetColor(7));
+RSICumulative.AssignValueColor(if RSICumulative > RSICumulative[1] then RSICumulative.color("UP") else RSICumulative.color("DOWN"));
+
+OverSold.SetDefaultColor(GetColor(8));
+OverBought.SetDefaultColor(GetColor(8));
+
+====================
+
